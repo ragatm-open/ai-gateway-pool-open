@@ -1,0 +1,116 @@
+# AI Gateway Pool Open — environnement de QUALIFICATION Direct/Pool.
+#
+#   suite de parité (hôte) ──► 127.0.0.1:18100 ──► ai-gateway (accès DIRECT)
+#                          └─► 127.0.0.1:18090 ──► pool ──► ai-gateway (accès POOL)
+#                                                   └────► redis (affinité / qualification Redis réelle)
+#   ai-gateway ──► ollama (réseau interne) ; reranker TEI partage l'espace réseau de la Gateway.
+#
+# Les DEUX chemins interrogent la même Gateway Open et les mêmes modèles. Les poids des modèles
+# proviennent des volumes approvisionnés lors de la qualification, montés EN LECTURE SEULE (aucun téléchargement,
+# aucune écriture) : cette pile ne touche ni la configuration, ni les secrets, ni les volumes
+# applicatifs (db, media, redis) de l'installation Compact. Usage : scripts/qualification-up.sh.
+name: aigp-open-qualif
+
+services:
+  ollama:
+    image: ollama/ollama@sha256:05b6fe5143ed006d6d4abd39bdd575f962a5822bdf81e6fbb5e6894eb984ab9c
+    environment:
+      OLLAMA_KEEP_ALIVE: 5m
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "2"
+      OLLAMA_NOHISTORY: "1"
+    volumes:
+      - ollama_models:/root/.ollama:ro
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 20s
+      timeout: 10s
+      start_period: 20s
+      retries: 5
+    networks: [ai]
+    mem_limit: 5g
+
+  ai-gateway:
+    image: ai-gateway-open:compact
+    env_file: [./gateway.env]
+    ports:
+      - "127.0.0.1:${QUALIF_DIRECT_PORT:-18100}:8100"   # accès DIRECT (qualification seulement)
+    depends_on:
+      ollama: { condition: service_healthy }
+    # `edge` : réseau de bord non interne, nécessaire à la publication du port de qualification.
+    networks: [ai, edge]
+    mem_limit: 512m
+
+  reranker:
+    image: ghcr.io/huggingface/text-embeddings-inference@sha256:8de25e75ce39617f17f2f6c77d60a4f75b65e779ed5005420eb1400072a15c1c
+    network_mode: "service:ai-gateway"
+    command: ["--model-id", "BAAI/bge-reranker-v2-m3", "--revision", "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e",
+              "--port", "8300", "--max-client-batch-size", "64", "--max-batch-tokens", "4096",
+              "--max-batch-requests", "8", "--auto-truncate"]
+    environment:
+      HF_HUB_OFFLINE: "1"
+    volumes:
+      - tei_models:/data:ro
+    depends_on:
+      ai-gateway: { condition: service_started }
+    mem_limit: 6g
+
+  redis:
+    image: redis:7.2-alpine@sha256:3d2b46efa3280299fe6e117a33fccdfeb495c39098f95d076fadd12a88005b0a
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --save '' --appendonly no"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD requis (.env de qualification)}
+    ports:
+      - "127.0.0.1:${QUALIF_REDIS_PORT:-18379}:6379"   # tests Redis réels depuis l'hôte (qualification)
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [pool, edge]
+    mem_limit: 256m
+
+  pool:
+    image: ai-gateway-pool-open:qualif
+    build:
+      context: ../../..
+      args:
+        APP_GIT_SHA: "${APP_GIT_SHA:-unknown}"
+    environment:
+      POOL_ENVIRONMENT: production
+      POOL_CONFIG_FILE: /etc/ai-gateway-pool/pool.yaml
+      POOL_REQUIRE_APPROVED_CONFIG: "0"
+      POOL_ADMIN_TOKEN: ${POOL_ADMIN_TOKEN:?POOL_ADMIN_TOKEN requis (.env de qualification)}
+      POOL_LOG_LEVEL: INFO
+      AIGP_REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    volumes:
+      - ./pool.compact.yaml:/etc/ai-gateway-pool/pool.yaml:ro
+    ports:
+      - "127.0.0.1:${QUALIF_POOL_PORT:-18090}:8080"    # accès POOL
+    depends_on:
+      ai-gateway: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [pool, ai, edge]
+    mem_limit: 512m
+
+networks:
+  ai:
+    driver: bridge
+    internal: true
+  pool:
+    driver: bridge
+    internal: true
+  # Publication des ports de qualification sur 127.0.0.1 uniquement (Direct, Pool, Redis).
+  edge:
+    driver: bridge
+
+volumes:
+  # Volumes approvisionnés lors de la qualification (poids des modèles), montés en lecture seule.
+  ollama_models:
+    external: true
+    name: ragatm-compact_ollama_data
+  tei_models:
+    external: true
+    name: ragatm-compact_tei_data

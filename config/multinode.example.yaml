@@ -1,0 +1,101 @@
+# AI Gateway Pool Open — EXEMPLE MULTI-NŒUDS.
+#
+#   EXAMPLE_ONLY — MULTINODE_NOT_HARDWARE_QUALIFIED
+#
+# Ce fichier ILLUSTRE la syntaxe d'un Pool devant plusieurs AI Gateway Open. Les noms de services
+# (`gateway-a`, `gateway-b`) et d'hôtes (`gpu-host-a`, `gpu-host-b`) sont FICTIFS. La qualification a
+# validé cette configuration statiquement et exercé le routage multi-nœuds avec des nœuds SIMULÉS
+# et un Redis réel ; aucune campagne sur plusieurs serveurs GPU réels n'a eu lieu
+# (MULTINODE_HARDWARE_QUALIFIED = NO). Ne pas déployer tel quel.
+schema_version: 1
+status: example
+environment: staging
+
+routing:
+  # LEAST_INFLIGHT : requêtes en vol de CE processus Pool, agrégées par hôte physique.
+  # WEIGHTED_ROUND_ROBIN est l'alternative implémentée ; LEAST_BUSY / CAPABILITY_AWARE /
+  # TARGETED_NODE sont nommées mais refusées (ROUTING_NOT_READY).
+  policy: LEAST_INFLIGHT
+  model_substitution: FORBIDDEN
+
+nodes:
+  - node_id: gateway-a
+    physical_host_id: gpu-host-a
+    display_name: "AI Gateway Open — nœud A (fictif)"
+    environment: staging
+    gateway_instance: staging
+    base_url: http://gateway-a:8100
+    weight: 100
+    capabilities: [GENERATE, EMBEDDINGS, RERANK]
+    models:
+      - model_id: compact-generation
+        capabilities: [GENERATE]
+      - model_id: fr-en-retrieval
+        capabilities: [EMBEDDINGS]
+        revision: "1a37926bf842899cbf90583e3932f3820548716d9d07661ba622199ffe95c552"
+        dimension: 768
+        pipeline_id: fr-en-retrieval@1a37926b
+      - model_id: rerank-default
+        capabilities: [RERANK]
+    default_models: { GENERATE: compact-generation, EMBEDDINGS: fr-en-retrieval, RERANK: rerank-default }
+    max_inflight: 8
+
+  - node_id: gateway-b
+    physical_host_id: gpu-host-b
+    display_name: "AI Gateway Open — nœud B (fictif)"
+    environment: staging
+    gateway_instance: staging
+    base_url: http://gateway-b:8100
+    weight: 100
+    capabilities: [GENERATE, EMBEDDINGS]
+    models:
+      - model_id: compact-generation
+        capabilities: [GENERATE]
+      # Même modèle d'embeddings => MÊME révision, dimension et pipeline, sinon la configuration est
+      # refusée (espaces vectoriels incompatibles).
+      - model_id: fr-en-retrieval
+        capabilities: [EMBEDDINGS]
+        revision: "1a37926bf842899cbf90583e3932f3820548716d9d07661ba622199ffe95c552"
+        dimension: 768
+        pipeline_id: fr-en-retrieval@1a37926b
+    default_models: { GENERATE: compact-generation, EMBEDDINGS: fr-en-retrieval }
+    max_inflight: 8
+
+health:
+  probe_path: /health/runtime
+  probe_on_startup: true
+  background_probing: true
+  probe_interval_seconds: 30
+  capability_ttl_seconds: 300
+
+timeouts:
+  health_probe: { connect: 2, read: 3, write: 3, pool: 2, total_budget: 5 }
+  inference:    { connect: 5, read: 330, write: 60, pool: 10 }
+  streaming:    { connect: 5, read: 330, write: 60, pool: 10 }
+  upload:       { connect: 5, read: 120, write: 900, pool: 10 }
+  job_poll:     { connect: 3, read: 45, write: 10, pool: 5, total_budget: 60 }
+
+# Affinité de jobs partagée entre processus/réplicas : Redis, URL lue dans la variable
+# d'environnement NOMMÉE ici (jamais l'URL dans le YAML).
+job_affinity:
+  backend: redis
+  redis_url_env: AIGP_REDIS_URL
+  redis_key_prefix: aigp
+  redis_timeout_seconds: 2.0
+  ttl_seconds: 86400
+
+circuit_breaker:
+  failure_threshold: 3
+  open_seconds: 15
+  max_open_seconds: 300
+  saturation_max_seconds: 30
+
+# Basculement CONTRÔLÉ : uniquement si la requête n'a jamais quitté le Pool (connexion refusée,
+# délai de connexion), vers un autre nœud compatible du MÊME environnement.
+failover:
+  enabled: true
+  max_extra_nodes: 1
+
+upstream_allowlist:
+  - gateway-a:8100
+  - gateway-b:8100

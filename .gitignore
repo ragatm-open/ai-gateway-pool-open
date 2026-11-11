@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets / real environment files — never committed
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Real deployment configs (only *.example.yaml and local.yaml are versioned)
+config/*.yaml
+!config/*.example.yaml
+!config/local.yaml
+!config/local-multinode.yaml
+deploy/compose/*/.env
+deploy/compose/*/pool.yaml
+deploy/compose/*/*.local.yaml
+
+# Logs / temp
+*.log
+logs/
+tmp/
+.DS_Store
+var/

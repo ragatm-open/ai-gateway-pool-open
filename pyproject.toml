@@ -1,0 +1,89 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-gateway-pool"
+version = "0.1.0"
+description = "Independent router in front of one or more AI Gateway Open nodes (single-node or pooled deployments)."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "RAGatm Open contributors" }]
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+    "httpx>=0.28",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "PyYAML>=6.0",
+    # httpcore probes `import sniffio` on every connection operation; when it is
+    # absent the failed import is retried each time (measured: ~10 lookups of
+    # sys.path per relayed request). Installing it makes the probe a dict hit.
+    "sniffio>=1.3",
+    # Durable shared job affinity store (POOL-3), asyncio client.
+    "redis>=5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "types-PyYAML>=6.0",
+    "build>=1.2",
+    # Build backend for `python -m build --no-isolation` (CI package step).
+    "setuptools>=77",
+    "wheel>=0.43",
+]
+
+[project.scripts]
+ai-gateway-pool = "ai_gateway_pool.main:run"
+ai-gateway-pool-config = "ai_gateway_pool.config.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-ra --strict-markers"
+filterwarnings = [
+    "error",
+    # fastapi.testclient re-export warning (Starlette 1.x), test-only, upstream issue.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+]
+markers = [
+    "contract_stub: preparatory contract test backed by a fixture/stub, NOT a live compatibility proof",
+    "redis_real: runs against a REAL Redis (AIGP_TEST_REDIS_URL), skipped when unset",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests start local fixed commands (pool entrypoint, `docker pause` of the isolated
+# qualification Redis): S603/S607 are expected there and nowhere else.
+"tests/**" = ["S101", "S105", "S106", "S108", "S603", "S607"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+files = [
+    "src/ai_gateway_pool/config",
+    "src/ai_gateway_pool/nodes",
+    "src/ai_gateway_pool/routing",
+    "src/ai_gateway_pool/jobs",
+    "src/ai_gateway_pool/transport",
+    "src/ai_gateway_pool/errors.py",
+]

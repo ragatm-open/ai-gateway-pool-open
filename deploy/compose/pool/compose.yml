@@ -1,0 +1,65 @@
+# AI Gateway Pool Open — déploiement GÉNÉRIQUE du Pool.
+#
+#   client ──► pool (127.0.0.1:${POOL_PORT}) ──► AI Gateway Open (service `ai-gateway`, fourni par
+#                                                 ailleurs : pile Compact ou autre composition)
+#              └──► redis (affinité de jobs ; requis seulement si job_affinity.backend=redis)
+#
+# · aucune Gateway, aucun modèle ici : le Pool est un routeur sans GPU ;
+# · configuration montée (pool.yaml, copie relue de config/compact.example.yaml) ; aucun secret
+#   dans l'image ; POOL_ADMIN_TOKEN et le mot de passe Redis viennent du `.env` local (0600) ;
+# · réseau `upstream` EXTERNE : celui où vit le service `ai-gateway` (ex. le réseau `ai` d'une pile
+#   Compact, `docker network ls`) — à déclarer dans .env (UPSTREAM_NETWORK). Le Pool rejoint ce réseau
+#   en client ; il ne publie que son propre port, en boucle locale.
+name: ${COMPOSE_PROJECT_NAME:-aigp-open}
+
+services:
+  pool:
+    image: ai-gateway-pool-open:${POOL_IMAGE_TAG:-local}
+    build:
+      context: ../../..
+      args:
+        APP_GIT_SHA: "${APP_GIT_SHA:-unknown}"
+    environment:
+      POOL_ENVIRONMENT: ${POOL_ENVIRONMENT:-production}
+      POOL_CONFIG_FILE: /etc/ai-gateway-pool/pool.yaml
+      POOL_REQUIRE_APPROVED_CONFIG: ${POOL_REQUIRE_APPROVED_CONFIG:-1}
+      POOL_ADMIN_TOKEN: ${POOL_ADMIN_TOKEN:?POOL_ADMIN_TOKEN requis (.env)}
+      POOL_LOG_LEVEL: ${POOL_LOG_LEVEL:-INFO}
+      AIGP_REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD requis (.env)}@redis:6379/0
+    volumes:
+      - ./pool.yaml:/etc/ai-gateway-pool/pool.yaml:ro
+    ports:
+      - "127.0.0.1:${POOL_PORT:-18090}:8080"
+    depends_on:
+      redis: { condition: service_healthy }
+    networks: [pool, upstream]
+    mem_limit: ${POOL_MEM:-512m}
+    restart: unless-stopped
+    # HEALTHCHECK /health/live hérité du Dockerfile (liveness du Pool, non inférentiel).
+
+  redis:
+    image: redis:7.2-alpine@sha256:3d2b46efa3280299fe6e117a33fccdfeb495c39098f95d076fadd12a88005b0a
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes --save 60 1 --maxmemory 128mb --maxmemory-policy noeviction"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [pool]
+    mem_limit: 192m
+    restart: unless-stopped
+
+networks:
+  pool:
+    driver: bridge
+    internal: true
+  upstream:
+    external: true
+    name: ${UPSTREAM_NETWORK:?UPSTREAM_NETWORK requis dans .env (réseau Docker où vit le service ai-gateway)}
+
+volumes:
+  redis_data:

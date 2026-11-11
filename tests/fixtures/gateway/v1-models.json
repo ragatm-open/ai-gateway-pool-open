@@ -1,0 +1,164 @@
+{
+ "provider": "ollama",
+ "models": [
+  {
+   "name": "qwen3-vl:8b-instruct-q8_0",
+   "model_logical": null,
+   "capabilities": [
+    "vision",
+    "completion",
+    "tools"
+   ],
+   "kind": null,
+   "dimension": null,
+   "registry_status": null,
+   "digest": "eff3eb825b322d4ffb85695e5a15cfe00b4d994d3c336f13dc867d8743b00245"
+  },
+  {
+   "name": "deepseek-r1:32b",
+   "model_logical": null,
+   "capabilities": [
+    "completion",
+    "thinking"
+   ],
+   "kind": null,
+   "dimension": null,
+   "registry_status": null,
+   "digest": "edba8017331d15236e57480eb45406c0d721db77a4cdcf234df500fc2ad3960c"
+  },
+  {
+   "name": "qwen3:30b-a3b-thinking-2507-q4_K_M",
+   "model_logical": "qwen-reasoning",
+   "capabilities": [
+    "completion",
+    "tools",
+    "thinking"
+   ],
+   "kind": "llm",
+   "dimension": null,
+   "registry_status": null,
+   "digest": "ad815644918f0eaab341c12b67837cc6dd4562342cdaf118f83d5d554cb37226"
+  },
+  {
+   "name": "glm-4.7-flash:latest",
+   "model_logical": null,
+   "capabilities": [
+    "completion",
+    "tools",
+    "thinking"
+   ],
+   "kind": null,
+   "dimension": null,
+   "registry_status": null,
+   "digest": "4475827791a269b02c8ec49b1c3bc1abb5846bacf3fae015b75d33986322d8f6"
+  },
+  {
+   "name": "gpt-oss:20b",
+   "model_logical": "oss-reasoning",
+   "capabilities": [
+    "completion",
+    "tools",
+    "thinking"
+   ],
+   "kind": "llm",
+   "dimension": null,
+   "registry_status": null,
+   "digest": "17052f91a42e97930aa6e28a6c6c06a983e6a58dbb00434885a0cf5313e376f7"
+  },
+  {
+   "name": "bge-m3:latest",
+   "model_logical": null,
+   "capabilities": [
+    "embedding"
+   ],
+   "kind": null,
+   "dimension": null,
+   "registry_status": null,
+   "digest": "7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab"
+  },
+  {
+   "name": "granite-embedding:278m",
+   "model_logical": "fr-en-retrieval",
+   "capabilities": [
+    "embedding"
+   ],
+   "kind": "embedding",
+   "dimension": 768,
+   "registry_status": "ready",
+   "digest": "1a37926bf842899cbf90583e3932f3820548716d9d07661ba622199ffe95c552"
+  },
+  {
+   "name": "gemma3:27b",
+   "model_logical": "gemma-large",
+   "capabilities": [
+    "completion"
+   ],
+   "kind": "llm",
+   "dimension": null,
+   "registry_status": null,
+   "digest": "a418f5838eaf7fe2cfe0a3046c8384b68ba43a4435542c942f9db00a5f342203"
+  },
+  {
+   "name": "qwen3:30b-instruct",
+   "model_logical": "qwen-large",
+   "capabilities": [
+    "completion",
+    "tools"
+   ],
+   "kind": "llm",
+   "dimension": null,
+   "registry_status": null,
+   "digest": "19e422b0231392335cfc49cfd172de7034bb1aeabb08aa307cce745c60b272fe"
+  },
+  {
+   "name": "mistral-small3.2:24b",
+   "model_logical": "vision-large",
+   "capabilities": [
+    "vision",
+    "completion",
+    "tools"
+   ],
+   "kind": "llm",
+   "dimension": null,
+   "registry_status": null,
+   "digest": "5a408ab55df5c1b5cf46533c368813b30bf9e4d8fc39263bf2a3338cfa3b895b"
+  },
+  {
+   "name": "qwen3:14b",
+   "model_logical": "qwen-judge",
+   "capabilities": [
+    "completion",
+    "tools",
+    "thinking"
+   ],
+   "kind": "llm",
+   "dimension": null,
+   "registry_status": null,
+   "digest": "bdbd181c33f2ed1b31c972991882db3cf4d192569092138a7d29e973cd9debe8"
+  },
+  {
+   "name": "nomic-embed-text:latest",
+   "model_logical": "legacy-768",
+   "capabilities": [
+    "embedding"
+   ],
+   "kind": "embedding",
+   "dimension": 768,
+   "registry_status": "ready",
+   "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f"
+  },
+  {
+   "name": "llama3.1:8b",
+   "model_logical": "llama-chat",
+   "capabilities": [
+    "completion",
+    "tools"
+   ],
+   "kind": "llm",
+   "dimension": null,
+   "registry_status": null,
+   "digest": "46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e"
+  }
+ ],
+ "_fixture_note": "SYNTHETIC fixture in the historical form of a staging Gateway inventory: private model entries removed; not a live snapshot. The Open Compact inventory is v1-models.compact.json."
+}

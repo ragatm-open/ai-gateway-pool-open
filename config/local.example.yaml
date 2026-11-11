@@ -1,0 +1,26 @@
+# AI Gateway Pool Open — configuration de DÉVELOPPEMENT local (scripts/check-local.sh).
+# Nœud volontairement injoignable (rien n'écoute sur 127.0.0.1:18299) : sert à démarrer le Pool
+# et à vérifier que le relais refuse proprement (UPSTREAM_UNAVAILABLE) sans aucune Gateway.
+schema_version: 1
+status: example
+environment: development
+routing:
+  policy: SINGLE_NODE
+nodes:
+  - node_id: local-gateway
+    physical_host_id: local-host
+    display_name: "Gateway locale (absente)"
+    environment: development
+    gateway_instance: development
+    base_url: http://127.0.0.1:18299
+    capabilities: [GENERATE, EMBEDDINGS, RERANK, ASR]
+    models:
+      - { model_id: compact-generation-8, capabilities: [GENERATE] }
+      - { model_id: fr-en-retrieval, capabilities: [EMBEDDINGS], dimension: 768 }
+      - { model_id: rerank-default, capabilities: [RERANK] }
+      - { model_id: asr-default, capabilities: [ASR] }
+job_affinity:
+  backend: sqlite
+  sqlite_path: var/job-affinity.sqlite3
+upstream_allowlist:
+  - 127.0.0.1:18299

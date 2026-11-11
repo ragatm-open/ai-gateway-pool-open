@@ -1,0 +1,111 @@
+# AI Gateway Pool Open — configuration MONO-NŒUD (profil Compact).
+#
+# Un Pool devant UNE seule AI Gateway Open. `ai-gateway` est le nom du service Docker de la
+# Gateway dans un réseau Compose : ce n'est pas une machine. Toutes les valeurs correspondent au
+# contrat `gateway-api/1.0` et au registre Compact d'AI Gateway Open.
+#
+# status: example => refusé si POOL_REQUIRE_APPROVED_CONFIG=1. Pour un déploiement, copier ce
+# fichier, relire chaque valeur, puis passer `status: approved` (ce qui impose upstream_allowlist
+# et job_affinity.backend ∈ {redis, none}).
+schema_version: 1
+status: example
+# L'environnement est confronté à celui que la Gateway publie sur /health/runtime
+# (AI_GATEWAY_ENVIRONMENT, « production » par défaut dans AI Gateway Open) : une Gateway qui
+# annonce un autre environnement est marquée UNAVAILABLE et jamais utilisée.
+environment: production
+
+routing:
+  policy: SINGLE_NODE          # exactement un nœud activé
+  model_substitution: FORBIDDEN  # seule valeur : le modèle demandé est servi tel quel ou refusé
+
+nodes:
+  - node_id: compact-gateway
+    physical_host_id: compact-host
+    display_name: "AI Gateway Open (Compact)"
+    environment: production
+    gateway_instance: production
+    base_url: http://ai-gateway:8100
+    enabled: true
+    weight: 100
+    # Capacités annoncées : uniquement celles dont la Gateway Open publie l'état ENABLED.
+    # ASR / VISION / CHAT sont DISABLED dans le profil Compact : non déclarées, donc refusées
+    # par le Pool (CAPABILITY_NOT_AVAILABLE) avant tout appel.
+    capabilities: [GENERATE, EMBEDDINGS, RERANK]
+    # Modèles AUTORISÉS (noms LOGIQUES du registre Gateway Open ; la Gateway accepte aussi le
+    # tag amont, déclaré ici pour les clients qui l'emploient). Aucune substitution : un modèle
+    # absent de cette liste est refusé par le Pool (MODEL_NOT_AVAILABLE), jamais remplacé.
+    models:
+      - model_id: compact-generation-8          # qwen2.5:1.5b-instruct (profil CPU / 8 Go)
+        capabilities: [GENERATE]
+        revision: "65ec06548149b04c096a120e4a6da9d4017ea809c91734ea5631e89f96ddc57b"
+      - model_id: qwen2.5:1.5b-instruct
+        capabilities: [GENERATE]
+        revision: "65ec06548149b04c096a120e4a6da9d4017ea809c91734ea5631e89f96ddc57b"
+      - model_id: fr-en-retrieval                 # granite-embedding:278m, 768 dimensions
+        capabilities: [EMBEDDINGS]
+        revision: "1a37926bf842899cbf90583e3932f3820548716d9d07661ba622199ffe95c552"
+        dimension: 768
+        pipeline_id: fr-en-retrieval@1a37926b    # famille de pipeline du profil Compact
+      - model_id: granite-embedding:278m
+        capabilities: [EMBEDDINGS]
+        revision: "1a37926bf842899cbf90583e3932f3820548716d9d07661ba622199ffe95c552"
+        dimension: 768
+        pipeline_id: fr-en-retrieval@1a37926b
+      - model_id: rerank-default                  # BAAI/bge-reranker-v2-m3 @ 953dc6f6 (TEI)
+        capabilities: [RERANK]
+    # Modèles implicites (requête sans `model`) : ceux que la Gateway Open applique elle-même
+    # (OLLAMA_GENERATE_MODEL / OLLAMA_EMBEDDING_MODEL / AI_GATEWAY_RERANK_MODEL du profil Compact).
+    default_models:
+      GENERATE: compact-generation-8
+      EMBEDDINGS: fr-en-retrieval
+      RERANK: rerank-default
+    max_inflight: 8
+
+health:
+  probe_path: /health/runtime     # seul chemin de sonde admis (non inférentiel) ; + /v1/models
+  probe_on_startup: true
+  background_probing: true
+  probe_interval_seconds: 30
+  capability_ttl_seconds: 300
+
+timeouts:
+  # Alignés sur AI Gateway Open (AI_GATEWAY_TIMEOUT_SECONDS=300) et RAGatm Open (300 s) : le Pool
+  # attend plus longtemps que ses clients et moins longtemps qu'une génération CPU n'est admise.
+  health_probe: { connect: 2, read: 3, write: 3, pool: 2, total_budget: 5 }
+  inference:    { connect: 5, read: 330, write: 60, pool: 10 }
+  streaming:    { connect: 5, read: 330, write: 60, pool: 10 }
+  upload:       { connect: 5, read: 120, write: 900, pool: 10 }
+  job_poll:     { connect: 3, read: 45, write: 10, pool: 5, total_budget: 60 }
+
+# Aucun job ASR dans le profil Compact : les routes /v1/audio/* sont refusées (ROUTING_NOT_READY)
+# sans contacter la Gateway, qui les refuserait elle-même (asr_unavailable).
+job_affinity:
+  backend: none
+
+transport:
+  max_connections: 100
+  max_keepalive_connections: 20
+  keepalive_expiry_seconds: 4
+  # Bornes d'inspection JSON : au-dessus de AI_GATEWAY_REQUEST_MAX_BYTES (2 Mio) de la Gateway,
+  # qui garde le dernier mot (413 request_too_large).
+  json_inspect_max_bytes: 4194304
+  json_inspect_budget_bytes: 67108864
+  stream_chunk_bytes: 65536
+
+# Disjoncteur sur les pannes de TRANSPORT uniquement (jamais sur un 4xx/5xx applicatif relayé) ;
+# une saturation 503 + Retry-After de la Gateway suspend le nœud pour la durée annoncée (bornée).
+circuit_breaker:
+  failure_threshold: 3
+  open_seconds: 15
+  max_open_seconds: 300
+  saturation_max_seconds: 30
+
+# Un seul nœud : aucun basculement possible (conservé explicite).
+failover:
+  enabled: false
+  max_extra_nodes: 0
+
+# Allowlist des upstreams : seule destination admise (hôte:port). Un client ne peut JAMAIS
+# désigner une autre URL (en-têtes de redirection refusés : UPSTREAM_OVERRIDE_DENIED).
+upstream_allowlist:
+  - ai-gateway:8100

@@ -1,0 +1,269 @@
+{
+ "provider": "ai_gateway",
+ "version": "2.0.0-open.1",
+ "environment": "production",
+ "build": {
+  "git_sha": "not_reported",
+  "version": "2.0.0-open.1",
+  "image_digest": "not_reported"
+ },
+ "registry_version": 1,
+ "generation_strict_registry": true,
+ "llm_models": [
+  {
+   "model_logical": "compact-generation",
+   "ollama_name": "qwen2.5:7b-instruct",
+   "capabilities": [
+    "completion",
+    "structured_output"
+   ],
+   "resource_class": "medium",
+   "context_profile": "compact-rag",
+   "keep_alive_profile": "resident",
+   "generation_profile": "compact-answer",
+   "default_think": null,
+   "structured_output": true,
+   "production_allowed": true,
+   "staging_allowed": true,
+   "reasoning_profile": null,
+   "expected_digest": null,
+   "compact": {
+    "compact_role": "generation-compact-12",
+    "license": "Apache-2.0",
+    "qualification": "candidate",
+    "memory_budget_mib": 6144,
+    "version": "qwen2.5-7b-instruct-q4_K_M"
+   },
+   "default_num_ctx": 8192,
+   "max_num_ctx": 16384,
+   "keep_alive": "30m",
+   "keep_alive_client_override": true,
+   "allowed_here": true,
+   "chat": false,
+   "reasoning": {
+    "type": "none",
+    "default": null,
+    "allowed": [
+     "none"
+    ],
+    "disable_supported": true,
+    "expose_thinking": false
+   }
+  },
+  {
+   "model_logical": "compact-generation-8",
+   "ollama_name": "qwen2.5:1.5b-instruct",
+   "capabilities": [
+    "completion",
+    "structured_output"
+   ],
+   "resource_class": "small",
+   "context_profile": "compact-small",
+   "keep_alive_profile": "transient",
+   "generation_profile": "compact-answer",
+   "default_think": null,
+   "structured_output": true,
+   "production_allowed": true,
+   "staging_allowed": true,
+   "reasoning_profile": null,
+   "expected_digest": "65ec06548149b04c096a120e4a6da9d4017ea809c91734ea5631e89f96ddc57b",
+   "compact": {
+    "compact_role": "generation-compact-8",
+    "license": "Apache-2.0",
+    "qualification": "experimental",
+    "memory_budget_mib": 2048,
+    "version": "qwen2.5-1.5b-instruct-q4_K_M"
+   },
+   "default_num_ctx": 8192,
+   "max_num_ctx": 16384,
+   "keep_alive": "2m",
+   "keep_alive_client_override": true,
+   "allowed_here": true,
+   "chat": false,
+   "reasoning": {
+    "type": "none",
+    "default": null,
+    "allowed": [
+     "none"
+    ],
+    "disable_supported": true,
+    "expose_thinking": false
+   }
+  }
+ ],
+ "context_profiles": {
+  "compact-rag": {
+   "num_ctx": 8192,
+   "max_num_ctx": 16384
+  },
+  "compact-small": {
+   "num_ctx": 8192,
+   "max_num_ctx": 16384
+  }
+ },
+ "keep_alive_profiles": {
+  "resident": {
+   "keep_alive": "30m",
+   "client_override": true
+  },
+  "transient": {
+   "keep_alive": "2m",
+   "client_override": true
+  }
+ },
+ "generation_profiles": {
+  "compact-answer": {
+   "default_num_predict": 2048,
+   "max_num_predict": 4096
+  }
+ },
+ "reasoning_profiles": {},
+ "inflight": {
+  "total": 0,
+  "by_model": {}
+ },
+ "host_admission": {
+  "reaper_pending": 0
+ },
+ "queued": {
+  "total": 0,
+  "by_model": {}
+ },
+ "compute": {
+  "isolation": "none",
+  "shared_with_environments": [
+   "staging"
+  ],
+  "shared_resources": [
+   "gpu",
+   "ollama",
+   "rerank_backend"
+  ],
+  "gpu_count": 1,
+  "sibling_inflight": "not_observable_here"
+ },
+ "rerank": {
+  "enabled": true,
+  "default_model": "rerank-default",
+  "models": [
+   {
+    "model_logical": "rerank-default",
+    "compact": {
+     "compact_role": "reranking-local",
+     "license": "Apache-2.0",
+     "qualification": "experimental",
+     "memory_budget_mib": 1500,
+     "version": "953dc6f6"
+    },
+    "provider": "local_cross_encoder",
+    "artifact": "BAAI/bge-reranker-v2-m3",
+    "revision": "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e",
+    "max_documents_per_request": 64,
+    "max_query_chars": 2000,
+    "max_document_chars": 4000,
+    "max_total_chars": 160000,
+    "on_overflow": "reject",
+    "higher_is_better": true,
+    "calibrated": false,
+    "production_allowed": true,
+    "staging_allowed": true
+   }
+  ],
+  "backend": {
+   "implementation": "tei",
+   "image_digest": "sha256:8de25e75ce39617f17f2f6c77d60a4f75b65e779ed5005420eb1400072a15c1c"
+  }
+ },
+ "asr": {
+  "enabled": false,
+  "default_model": null,
+  "models": [],
+  "limits": {
+   "sync_wait_seconds": 120,
+   "max_concurrency": 1,
+   "gpu_budget_mib": 22528,
+   "gpu_reserve_mib": 4608,
+   "gpu_baseline_mib": 2150
+  },
+  "backend": {
+   "implementation": "faster-whisper",
+   "image_digest": "not_reported"
+  }
+ },
+ "queue_time": "not_observable",
+ "capabilities": {
+  "inventory": {
+   "state": "OBSERVED",
+   "observed_at": "2026-11-09T12:22:52.209572+00:00"
+  },
+  "generation": {
+   "state": "ENABLED",
+   "default_model": "compact-generation-8",
+   "models": {
+    "compact-generation": {
+     "installed": false
+    },
+    "compact-generation-8": {
+     "installed": true
+    }
+   },
+   "probe": null
+  },
+  "chat": {
+   "state": "DISABLED",
+   "models": [],
+   "probe": null
+  },
+  "embeddings": {
+   "state": "ENABLED",
+   "default_model": "fr-en-retrieval",
+   "models": {
+    "fr-en-retrieval": {
+     "registry_status": "ready",
+     "installed": true,
+     "identity_verified": true
+    },
+    "legacy-768": {
+     "registry_status": "unavailable",
+     "installed": false,
+     "identity_verified": false
+    }
+   },
+   "probe": "/health/ready"
+  },
+  "rerank": {
+   "state": "ENABLED",
+   "probe": "/health/rerank"
+  },
+  "asr": {
+   "state": "DISABLED",
+   "probe": "/health/asr"
+  },
+  "vision": {
+   "state": "DISABLED",
+   "probe": "/health/vision"
+  },
+  "structured_extract": {
+   "state": "UNAVAILABLE",
+   "reason": "module_not_included"
+  },
+  "semantic_extract": {
+   "state": "UNAVAILABLE",
+   "reason": "module_not_included"
+  },
+  "host_admission": {
+   "state": "UNAVAILABLE",
+   "reason": "controller_not_included"
+  }
+ },
+ "limits": {
+  "generate_max_concurrency": 2,
+  "embeddings_max_concurrency": 2,
+  "rerank_max_concurrency": 2,
+  "vision_max_concurrency": 1,
+  "request_max_bytes": 2097152,
+  "embeddings_max_batch": 64,
+  "timeout_seconds": 300
+ },
+ "_fixture_note": "LIVE snapshot of an AI Gateway Open node (Compact profile) captured during qualification of the Compact profile."
+}

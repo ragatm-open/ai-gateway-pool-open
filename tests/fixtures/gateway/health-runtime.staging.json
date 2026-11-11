@@ -1,0 +1,103 @@
+{
+ "provider": "ai_gateway",
+ "version": "2.0.0",
+ "environment": "staging",
+ "build": {
+  "git_sha": "0ba5e0ba5e0ba5e0ba5e0ba5e0ba5e0ba5e0ba5e",
+  "version": "2.0.0",
+  "image_digest": "not_reported"
+ },
+ "registry_version": 1,
+ "inflight": {
+  "total": 0,
+  "by_model": {}
+ },
+ "queued": {
+  "total": 0,
+  "by_model": {}
+ },
+ "queue_time": "not_observable",
+ "compute": {
+  "isolation": "none",
+  "shared_with_environments": [
+   "production"
+  ],
+  "gpu_count": 1,
+  "sibling_inflight": "not_observable_here"
+ },
+ "llm_models": [
+  {
+   "model_logical": "llama-chat",
+   "capabilities": [
+    "completion",
+    "tools"
+   ]
+  },
+  {
+   "model_logical": "qwen-judge",
+   "capabilities": [
+    "completion",
+    "tools",
+    "thinking",
+    "structured_output"
+   ]
+  },
+  {
+   "model_logical": "qwen-large",
+   "capabilities": [
+    "completion",
+    "tools",
+    "structured_output"
+   ]
+  },
+  {
+   "model_logical": "vision-large",
+   "capabilities": [
+    "completion",
+    "vision",
+    "tools",
+    "structured_output"
+   ]
+  },
+  {
+   "model_logical": "gemma-large",
+   "capabilities": [
+    "completion",
+    "structured_output"
+   ]
+  },
+  {
+   "model_logical": "oss-reasoning",
+   "capabilities": [
+    "chat",
+    "structured_output"
+   ]
+  },
+  {
+   "model_logical": "qwen-reasoning",
+   "capabilities": [
+    "chat",
+    "structured_output"
+   ]
+  }
+ ],
+ "rerank": {
+  "enabled": true,
+  "models": [
+   {
+    "model_logical": "rerank-default"
+   }
+  ],
+  "default_model": "rerank-default"
+ },
+ "asr": {
+  "enabled": true,
+  "models": [
+   {
+    "model_logical": "asr-whisper-turbo"
+   }
+  ],
+  "default_model": "asr-whisper-turbo"
+ },
+ "_fixture_note": "git_sha is a SYNTHETIC build identifier (documented placeholder, not a real commit). SYNTHETIC fixture in the historical form of a staging Gateway runtime: private model entries removed; not a live snapshot. The Open Compact runtime is health-runtime.compact.json."
+}

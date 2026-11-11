@@ -1,0 +1,63 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # No secrets are used: tests never reach a real Gateway.
+    # A throw-away Redis service container backs the REAL Redis affinity tests.
+    services:
+      redis:
+        image: redis:7.2-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 2s --health-timeout 2s
+          --health-retries 15
+    env:
+      AIGP_TEST_REDIS_URL: redis://127.0.0.1:6379/0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install locked dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --require-hashes -r requirements-dev.lock
+          .venv/bin/pip install --no-deps -e .
+      - name: Lint
+        run: |
+          .venv/bin/ruff check src tests
+          .venv/bin/ruff format --check src tests
+      - name: Types
+        run: .venv/bin/mypy
+      - name: Config validation
+        run: PYTHON=.venv/bin/python ./scripts/validate-config.sh
+      - name: Security basic checks
+        run: ./scripts/check-secrets.sh
+      - name: Tests (includes real Redis affinity tests)
+        shell: bash  # -eo pipefail: a pytest failure must fail the step despite `tee`
+        run: .venv/bin/pytest -q -rs | tee pytest.out
+      - name: Real Redis tests actually ran
+        # Only the docker-pause outage tests may be skipped in CI (no container control).
+        shell: bash
+        run: |
+          ! grep -q "AIGP_TEST_REDIS_URL not set" pytest.out
+          .venv/bin/pytest -q -m redis_real -rs | tee redis.out
+          grep -E "[0-9]+ passed" redis.out
+      - name: Package build
+        run: .venv/bin/python -m build --wheel --no-isolation --outdir dist .
+      - name: Docker image build (no push)
+        run: docker build --build-arg APP_GIT_SHA=${{ github.sha }} -t ai-gateway-pool:ci .
